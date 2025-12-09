@@ -1,4 +1,19 @@
+from typing import List, Tuple, Union
 import sys
+
+
+def transpose_strings(input_chunk: Union[List[str], Tuple[str]]) -> Union[List[str], Tuple[str]]:
+    result = []
+    for c in range(len(input_chunk[0])):
+        line = []
+        for r in range(len(input_chunk)):
+            line.append(input_chunk[r][c])
+        result.append(''.join(line))
+
+    if isinstance(input_chunk, tuple):
+        return tuple(result)
+    else:
+        return result
 
 
 def part1():
@@ -29,24 +44,39 @@ def part1():
 
 
 def part2():
-    lines = [line.strip() for line in sys.stdin]
+    lines = [line for line in sys.stdin]
     max_length = max(map(lambda l: len(l), lines))
     lines = [line if len(line) == max_length else line + ' '*(max_length-len(line)) for line in lines]
 
-    height = len(lines)
-    width = max_length
+    lines = transpose_strings(lines)
+    latest_chunk = []
+    chunks = [latest_chunk]
 
-    for x in range(width-1, -1, -1):
-        print(x)
-    #head = lines[:-1]
-    #head.reverse()
+    for l in lines:
+        if l.strip() == '':
+            latest_chunk = []
+            chunks.append(latest_chunk)
+        else:
+            latest_chunk.append(l.strip())
 
-    #lines = head + [lines[-1]]
+    final_result = 0
+    for c in chunks[:-1]:
+        operation = c[0][-1]
+        c[0] = c[0][:-1]
 
-    #lines.reverse()
-    #for line in lines:
-    #    print(f'[{line}]')
-    
+        if operation == '+':
+            result = 0
+        else:
+            result = 1
+
+        for entry in c:
+            if operation == '+':
+                result += int(entry)
+            else:
+                result *= int(entry)
+        final_result += result
+
+    return final_result
 
 
 print(part2())
