@@ -1,7 +1,6 @@
 from collections import defaultdict
 from functools import cache
 import sys
-import graphviz
 
 
 def part1():
@@ -35,7 +34,6 @@ def part1():
 def part2():
     nodes = set()
     edges = defaultdict(set)
-    g = graphviz.Graph()
 
     @cache
     def count(from_, to, exclude = None):
@@ -61,38 +59,26 @@ def part2():
         from_, tos = line.strip().split(":")
         if from_ not in nodes:
             nodes.add(from_)
-            g.node(from_)
     
         for to in tos.strip().split():
-            if to not in nodes:
-                g.node(to)            
-
             if to not in edges:
                 edges[to] = set()
 
         for to in tos.strip().split():
             edges[from_].add(to)
-            g.edge(from_, to)
-
-    g.render('/Users/luiz/g.gv')
-
-            
-
-    # from svr to out passing through both fft and dac in any order:
-    # svr -> fft -> dac -> out
 
     result = 0
+
+    # svr -> fft -> dac -> out    
     dac_to_out = count('dac', 'out', frozenset({'svr', 'fft'}))
     fft_to_dac = count('fft', 'dac', frozenset({'svr', 'out'}))
     svr_to_fft = count('svr', 'fft', frozenset({'dac', 'out'}))
-
     result += svr_to_fft * fft_to_dac * dac_to_out
-    
+
     # svr -> dac -> fft -> out
     fft_to_out = count('fft', 'out', frozenset({'svr', 'dac'}))
     dac_to_fft = count('dac', 'fft', frozenset({'svr', 'out'}))
     svr_to_dac = count('svr', 'dac', frozenset({'fft', 'out'}))
-
     result += svr_to_dac * dac_to_fft * fft_to_out
 
     return result
