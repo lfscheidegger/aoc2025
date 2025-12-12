@@ -70,15 +70,15 @@ def part2():
     result = 0
 
     # svr -> fft -> dac -> out    
-    dac_to_out = count('dac', 'out', frozenset({'svr', 'fft'}))
-    fft_to_dac = count('fft', 'dac', frozenset({'svr', 'out'}))
-    svr_to_fft = count('svr', 'fft', frozenset({'dac', 'out'}))
+    dac_to_out = count('dac', 'out')#, frozenset({'svr', 'fft'}))
+    fft_to_dac = count('fft', 'dac')#, frozenset({'svr', 'out'}))
+    svr_to_fft = count('svr', 'fft')#, frozenset({'dac', 'out'}))
     result += svr_to_fft * fft_to_dac * dac_to_out
 
     # svr -> dac -> fft -> out
-    fft_to_out = count('fft', 'out', frozenset({'svr', 'dac'}))
-    dac_to_fft = count('dac', 'fft', frozenset({'svr', 'out'}))
-    svr_to_dac = count('svr', 'dac', frozenset({'fft', 'out'}))
+    fft_to_out = count('fft', 'out')#, frozenset({'svr', 'dac'}))
+    dac_to_fft = count('dac', 'fft')#, frozenset({'svr', 'out'}))
+    svr_to_dac = count('svr', 'dac')#, frozenset({'fft', 'out'}))
     result += svr_to_dac * dac_to_fft * fft_to_out
 
     return result
