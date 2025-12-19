@@ -26,13 +26,15 @@ class Region:
             result += f'{row:0{self.width}b}'.replace('0', '.').replace('1', '#') + '\n'
         return result
 
-    @cache
     def try_fit(self, present: Present) -> 'Region':
         """
         Try to fit the given present in the given region, with the optional given offset.
         The offset moves presents from top to bottom and *right to left*.
 
         Returns the new region, or same if it's not possible to fit."""
+        if present_area(present) > self.area:
+            return self
+        
         offset = (present >> 15) & (2**6 - 1), (present >> 9) & (2**6 - 1)
         present &= 511
         if offset[0] + 3 > len(self.data):
@@ -105,11 +107,10 @@ def region_variants(present: Present, region: Region) -> Generator[Present]:
 
 def variants(present: Present, region: Region) -> Generator[Present]:
     assert(present < 512)
-    
-    # include self in variants
-    for p in region_variants(present, region):
-        yield p
 
+    unique_presents = set()
+    unique_presents.add(present)
+    
     shape_str_array = shape_str_to_shape_str_array(present_to_shape_str(present))
 
     # horizontal flip
@@ -118,42 +119,35 @@ def variants(present: Present, region: Region) -> Generator[Present]:
     temp[1] = shape_str_array[1][2] + shape_str_array[1][1] + shape_str_array[1][0]
     temp[2] = shape_str_array[2][2] + shape_str_array[2][1] + shape_str_array[2][0]
 
-    present = shape_str_to_present(shape_str_array_to_shape_str(temp))
-    for p in region_variants(present, region):
-        yield p
+    unique_presents.add(shape_str_to_present(shape_str_array_to_shape_str(temp)))
     
     # vertical flip
-    present = shape_str_to_present(shape_str_array_to_shape_str([
+    unique_presents.add(shape_str_to_present(shape_str_array_to_shape_str([
         shape_str_array[2],
         shape_str_array[1],
-        shape_str_array[0]]))
-
-    for p in region_variants(present, region):
-        yield p
+        shape_str_array[0]])))
 
     # 90 deg. rotation
     temp = [[shape_str_array[2][0], shape_str_array[1][0], shape_str_array[0][0]],
             [shape_str_array[2][1], shape_str_array[1][1], shape_str_array[0][1]],
             [shape_str_array[2][2], shape_str_array[1][2], shape_str_array[0][2]]]
-    present = shape_str_to_present(shape_str_array_to_shape_str(temp))
-    for p in region_variants(present, region):
-        yield p
+    unique_presents.add(shape_str_to_present(shape_str_array_to_shape_str(temp)))
 
     # 180 deg. rotation
     temp = [[shape_str_array[2][2], shape_str_array[2][1], shape_str_array[2][0]],
             [shape_str_array[1][2], shape_str_array[1][1], shape_str_array[1][0]],
             [shape_str_array[0][2], shape_str_array[0][1], shape_str_array[0][0]]]
-    present = shape_str_to_present(shape_str_array_to_shape_str(temp))
-    for p in region_variants(present, region):
-        yield p
+    unique_presents.add(shape_str_to_present(shape_str_array_to_shape_str(temp)))
 
     # 270 deg rotation
     temp = [[shape_str_array[0][2], shape_str_array[1][2], shape_str_array[2][2]],
             [shape_str_array[0][1], shape_str_array[1][1], shape_str_array[2][1]],
             [shape_str_array[0][0], shape_str_array[1][0], shape_str_array[2][0]]]
-    present = shape_str_to_present(shape_str_array_to_shape_str(temp))
-    for p in region_variants(present, region):
-        yield p
+    unique_presents.add(shape_str_to_present(shape_str_array_to_shape_str(temp)))
+
+    for present_shape in unique_presents:
+        for p in region_variants(present_shape, region):
+            yield p
 
 
 def print_present(present: Union[Present, str, List[str]]):
@@ -201,11 +195,13 @@ def parse_input():
             
 
 def part1():
+    """
     data = parse_input()
 
-    @cache
     def can_fit(presents: Tuple[Present], goal_state: Tuple[Region, List[int]]) -> bool:
         region, desired_presents = goal_state
+
+        # print(region, desired_presents)
 
         if sum(desired_presents) == 0:
             return True
@@ -218,12 +214,14 @@ def part1():
             if idx == present_idx
             else p for (idx, p) in enumerate(desired_presents))
 
-        present = presents[present_idx]
 
-        if present_area(present) > region.area:
-            # Not enough room left, no need to bother trying
+        total_desired_area = sum([present_area(presents[idx]) * count for idx, count in enumerate(desired_presents)])
+        if total_desired_area > region.area:
+            # not enough room left, no need to bother trying
             return False
         
+        present = presents[present_idx]
+
         for variant in variants(present, region):
             with_fit = region.try_fit(variant)
             # print(with_fit)
@@ -250,6 +248,19 @@ def part1():
             result += 1
 
     return result
+    """
 
+    data = parse_input()
+    presents = data[0]
+
+    result = 0
+    for goal_state in data[1]:
+        region, desired_presents = goal_state
+        total_desired_area = sum([present_area(presents[idx]) * count for idx, count in enumerate(desired_presents)])
+        if total_desired_area <= region.area:
+            result += 1
+
+    return result
+    
 
 print(part1())
