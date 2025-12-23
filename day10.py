@@ -1,6 +1,9 @@
 from dataclasses import dataclass
+from functools import cache
+from itertools import combinations
 from typing import Dict, Set, Tuple, List
-import heapq
+
+import sys
 
 
 @dataclass(frozen=True)
@@ -10,30 +13,6 @@ class Edge:
 
 
 Graph = Dict[str, Set[Edge]]
-
-
-def dijkstra(starting_point: str, graph: Graph) -> Dict[str, Tuple[int, List[str]]]:
-    result = {}
-
-    heap = [(0, starting_point, [])]
-    while len(heap) != 0:
-        best_cost, node, path = heapq.heappop(heap)
-
-        if node in result:
-            # already processed
-            continue
-
-        result[node] = (best_cost, path)
-
-        for neighbor in graph.get(node, set()):
-            next_node = neighbor.next_node_id
-            next_cost = best_cost + neighbor.cost
-            heapq.heappush(heap, (next_cost, next_node, path + [next_node]))
-
-    return result
-
-
-import sys
 
 
 def edge_str_to_number(edge_str: str) -> int:
@@ -90,48 +69,88 @@ def part1():
 
 
 def part2():
-    def get_next_state(state, edge):
-        return tuple([state[idx] + 1 if idx in edge else state[idx] for idx in range(len(state))])
+    BIG_NUMBER = 2**64 - 1
     
+    @dataclass(frozen=True)
+    class ButtonPattern:
+        pattern: Tuple[int]
+        button_cost: int
+
+        @staticmethod
+        def from_input_line(line: str) -> Tuple['ButtonPattern']:
+            state_token = tuple(int(x) for x in line.split()[-1][1:-1].split(','))
+            button_tokens = line.split()[1:-1]
+            button_tokens = list(map(lambda bt: tuple(int(x) for x in bt[1:-1].split(',')), button_tokens))
+
+            result = []
+            for combination_size in range(len(button_tokens) + 1):
+                for button_combination in combinations(button_tokens, combination_size):
+                    pattern = [0] * len(state_token)
+                    for button in button_combination:
+                        for circuit in button:
+                            pattern[circuit] += 1
+
+                    result.append(ButtonPattern(pattern=pattern, button_cost=len(button_combination)))
+
+            return tuple(result)
+
+    def all_zero(state: Tuple[int]) -> bool:
+        return all(map(lambda value: value == 0, state))
+
+    def all_even(state: Tuple[int]) -> bool:
+        return all(map(lambda value: value % 2 == 0, state))
+
+    def valid_state(state: Tuple[int]) -> bool:
+        return all(map(lambda value: value >= 0, state))
+
+    def get_initial_state(line: str) -> Tuple[int]:
+        return tuple(int(x) for x in line.split()[-1][1:-1].split(','))
+
+    def get_halved_state(state: Tuple[int]) -> Tuple[int]:
+        assert all_even(state)
+        return tuple(x // 2 for x in state)
+    
+    def get_next_state(state: Tuple[int], pattern: ButtonPattern) -> Tuple[int]:
+        return tuple([state[idx] - pattern.pattern[idx] for idx in range(len(state))])
+
+    #@cache    
+    def solve_single(state: Tuple[int], patterns: Tuple[ButtonPattern], depth: int = 0, so_far: int = 0) -> int:
+        # print(f'{4 * depth * ' '}{state} ({so_far})')
+        if not valid_state(state):
+            return BIG_NUMBER
+        
+        if all_zero(state):
+            return 0
+
+        result = BIG_NUMBER
+        for pattern in patterns:
+            next_state = get_next_state(state, pattern)
+            if not all_even(next_state):
+                continue
+
+            if not valid_state(next_state):
+                continue
+
+            next_state = get_halved_state(next_state)
+            # print(f'{4 * depth * ' '}ns -> {next_state}')
+            result = min(result, pattern.button_cost + 2 * solve_single(next_state, patterns, depth + 1, so_far + pattern.button_cost))
+
+        return result
+
     def solve_line(line: str) -> int:
-        tokens = line.split()[1:]
-        goal_state = tuple(int(x) for x in tokens[-1][1:-1].split(','))
+        patterns = ButtonPattern.from_input_line(line)
+        state = get_initial_state(line)
 
-        edges = list(map(lambda t: set(int(x) for x in t[1:-1].split(',')), tokens[:-1]))
-
-        initial_state = tuple([0] * len(goal_state))
-
-        queue = [(initial_state, 0)]
-        found = set()
-
-        while True:
-            assert len(queue) > 0
-            state, count = queue[0]        
-            queue = queue[1:]
-
-            if state in found:
-                continue
-
-            found.add(state)
-            if any(map(lambda idx: goal_state[idx] < state[idx], range(len(state)))):                
-                continue
-
-            for edge in edges:
-                next_state = get_next_state(state, edge)
-                if next_state == goal_state:
-                    return count + 1
-
-                queue.append((next_state, count + 1))
+        return solve_single(state, patterns)
 
     result = 0
-
     for idx, line in enumerate(sys.stdin):
-        print(idx)
         for_line = solve_line(line)
-        print(for_line)
+        print(idx, for_line)
         result += for_line
 
     print()
     return result
+
 
 print(part2())
